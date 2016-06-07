@@ -1,6 +1,7 @@
 # Welcome to retrier
 [![Build Status](https://api.travis-ci.org/alexo/retrier.svg)](http://travis-ci.org/alexo/retrier)
 [<img src="https://badges.gitter.im/alexo/spinner.svg" class="copy-button view" data-copy-text="[![Gitter chat](https://badges.gitter.im/alexo/spinnerj.svg)]">](https://gitter.im/alexo/retrier)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.github.alexo/retrier/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.github.alexo/retrier)
 
 Retrier is a zero dependency utility for java 8 which simplifies a common requirements related to retry mechanism.
 
