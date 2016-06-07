@@ -1,0 +1,3 @@
+nguage: java
+script: mvn clean test
+env: MAVEN_OPTS="-XX:MaxPermSize=256m"

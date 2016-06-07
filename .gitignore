@@ -2,3 +2,7 @@ target
 .classpath
 .project
 .settings
+*.iml
+*.ipr
+*.ips
+.idea
