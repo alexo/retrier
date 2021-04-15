@@ -59,13 +59,13 @@ public class Retrier {
      * @author Alex Objelean
      */
     public static class Strategies {
-        public static Function<Integer, Long> waitExponential(final double backoffBase) {
+        public static Function<Integer, Long> waitExponential(final long startWaitMillis, final double backoffBase) {
             return attempts -> {
                 if (attempts > 0) {
-                    final double backoffMillis = Math.pow(backoffBase, attempts);
+                    final double backoffMillis = startWaitMillis * Math.pow(backoffBase, attempts);
                     return Math.min(1000L, Math.round(backoffMillis));
                 }
-                return 0l;
+                return 0L;
             };
         }
 
@@ -78,7 +78,11 @@ public class Retrier {
         }
 
         public static Function<Integer, Long> waitExponential() {
-            return waitExponential(2);
+            return waitExponential(2.0D);
+        }
+
+        public static Function<Integer, Long> waitExponential(final double backoffBase) {
+            return waitExponential(1L, 2.0D);
         }
 
         /**
