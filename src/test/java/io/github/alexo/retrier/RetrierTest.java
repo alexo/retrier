@@ -23,7 +23,7 @@ public class RetrierTest {
     private static final int MAX_ATTEPTS = 10;
     @Mock
     private Callable<Object> callable;
-    private Retrier victim;
+    private Retrier<Object> victim;
 
     @BeforeMethod
     public void setUp() {
@@ -33,11 +33,11 @@ public class RetrierTest {
         victim = createDefaultBuilder().build();
     }
 
-    private Retrier.Builder createDefaultBuilder() {
-        return new Retrier.Builder().withStopStrategy(stopAfter(MAX_ATTEPTS));
+    private Retrier.Builder<Object> createDefaultBuilder() {
+        return new Retrier.Builder<Object>().withStopStrategy(stopAfter(MAX_ATTEPTS));
     }
 
-    private Retrier withCustomExceptionFailedStrategy() {
+    private Retrier<Object> withCustomExceptionFailedStrategy() {
         return createDefaultBuilder().withFailedRetryStrategy(CustomException.class::isInstance).build();
     }
 
@@ -46,22 +46,22 @@ public class RetrierTest {
 
     @Test(expectedExceptions = NullPointerException.class)
     public void cannotBuildWithNullFailedRetryStrategy() {
-        new Retrier.Builder().withFailedRetryStrategy(null);
+        new Retrier.Builder<>().withFailedRetryStrategy(null);
     }
 
     @Test(expectedExceptions = NullPointerException.class)
     public void cannotBuildWithNullResultRetryStrategy() {
-        new Retrier.Builder().withResultRetryStrategy(null);
+        new Retrier.Builder<>().withResultRetryStrategy(null);
     }
 
     @Test(expectedExceptions = NullPointerException.class)
     public void cannotBuildWithNullStopStrategy() {
-        new Retrier.Builder().withStopStrategy(null);
+        new Retrier.Builder<>().withStopStrategy(null);
     }
 
     @Test(expectedExceptions = NullPointerException.class)
     public void cannotBuildWithNullWaitStrategy() {
-        new Retrier.Builder().withWaitStrategy(null);
+        new Retrier.Builder<>().withWaitStrategy(null);
     }
 
     @Test
@@ -126,7 +126,7 @@ public class RetrierTest {
     public void shouldRetryWhenUsingCustomRetryStrategy() throws Exception {
         final int retryResult = 0;
         // retry as long as result is 0
-        victim = new Retrier.Builder().withResultRetryStrategy(i -> i.equals(retryResult))
+        victim = new Retrier.Builder<>().withResultRetryStrategy(i -> i.equals(retryResult))
                 .withStopStrategy(stopAfter(MAX_ATTEPTS)).build();
         doAnswer(i -> retryResult).doAnswer(i -> retryResult).doAnswer(i -> retryResult + 1)
                 .when(callable).call();
