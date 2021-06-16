@@ -12,21 +12,21 @@ import static java.util.Objects.requireNonNull;
  *
  * @author Alex Objelean
  */
-public class Retrier {
+public class Retrier<T> {
 
     @FunctionalInterface
-    public interface GiveUpStrategy {
-        <T> T whenNoMoreAttempts(T lastResult, Exception lastException) throws Exception;
+    public interface GiveUpStrategy<T> {
+        T whenNoMoreAttempts(T lastResult, Exception lastException) throws Exception;
     }
 
-    private static final Retrier SINGLE_ATTEMPT = new Retrier.Builder().withStopStrategy(Strategies.stopAfter(1))
+    private static final Retrier<Object> SINGLE_ATTEMPT = new Retrier.Builder<Object>().withStopStrategy(Strategies.stopAfter(1))
             .build();
 
     /**
      * Retrier that executes every operation exactly once. The operation is never retried. All exceptions are propagated
      * to the caller.
      */
-    public static Retrier singleAttempt() {
+    public static Retrier<Object> singleAttempt() {
         return SINGLE_ATTEMPT;
     }
 
@@ -37,7 +37,7 @@ public class Retrier {
     /**
      * Strategies used to check if the retry is required given a successful execution with a result.
      */
-    private final Predicate<Object> resultRetryStrategy;
+    private final Predicate<T> resultRetryStrategy;
     /**
      * Strategies used to check if the retry should be stopped given the provided number of attempts already performed.
      * Useful to limit the total number of attempts to a bounded value. By default this value is unbounded.
@@ -51,7 +51,7 @@ public class Retrier {
     /**
      * What to do when all attempts have been exhausted and the retrier still wasn't able to perform the operation.
      */
-    private final GiveUpStrategy giveUpStrategy;
+    private final GiveUpStrategy<T> giveUpStrategy;
 
     /**
      * Utility class responsible for creating several useful types of wait strategy used by Retrier.
@@ -59,13 +59,13 @@ public class Retrier {
      * @author Alex Objelean
      */
     public static class Strategies {
-        public static Function<Integer, Long> waitExponential(final double backoffBase) {
+        public static Function<Integer, Long> waitExponential(final long startWaitMillis, final double backoffBase) {
             return attempts -> {
                 if (attempts > 0) {
-                    final double backoffMillis = Math.pow(backoffBase, attempts);
+                    final double backoffMillis = startWaitMillis * Math.pow(backoffBase, attempts);
                     return Math.min(1000L, Math.round(backoffMillis));
                 }
-                return 0l;
+                return 0L;
             };
         }
 
@@ -78,7 +78,11 @@ public class Retrier {
         }
 
         public static Function<Integer, Long> waitExponential() {
-            return waitExponential(2);
+            return waitExponential(2.0D);
+        }
+
+        public static Function<Integer, Long> waitExponential(final double backoffBase) {
+            return waitExponential(1L, 2.0D);
         }
 
         /**
@@ -99,51 +103,48 @@ public class Retrier {
     /**
      * Default builder will retry on any exception for unlimited number of times without waiting between executions.
      */
-    public static class Builder {
+    public static class Builder<T> {
         private Predicate<Exception> failedRetryStrategy = e -> true;
-        private GiveUpStrategy giveUpStrategy = new GiveUpStrategy() {
-            @Override
-            public <T> T whenNoMoreAttempts(final T lastResult, final Exception lastException) throws Exception {
-                if (lastException != null) {
-                    throw lastException;
-                } else {
-                    return lastResult;
-                }
+        private final GiveUpStrategy<T> giveUpStrategy = (lastResult, lastException) -> {
+            if (lastException != null) {
+                throw lastException;
+            } else {
+                return lastResult;
             }
         };
 
-        private Predicate<Object> resultRetryStrategy = e -> false;
+        private Predicate<T> resultRetryStrategy = e -> false;
         private Predicate<Integer> stopStrategy = attempt -> false;
-        private Function<Integer, Long> waitStrategy = attempt -> 0l;
+        private Function<Integer, Long> waitStrategy = attempt -> 0L;
 
-        public Retrier build() {
-            return new Retrier(failedRetryStrategy, resultRetryStrategy, stopStrategy, waitStrategy, giveUpStrategy);
+        public Retrier<T> build() {
+            return new Retrier<T>(failedRetryStrategy, resultRetryStrategy, stopStrategy, waitStrategy, giveUpStrategy);
         }
 
-        public Builder withFailedRetryStrategy(final Predicate<Exception> failedRetryStrategy) {
+        public Builder<T> withFailedRetryStrategy(final Predicate<Exception> failedRetryStrategy) {
             this.failedRetryStrategy = requireNonNull(failedRetryStrategy);
             return this;
         }
 
-        public Builder withResultRetryStrategy(final Predicate<Object> resultRetryStrategy) {
+        public Builder<T> withResultRetryStrategy(final Predicate<T> resultRetryStrategy) {
             this.resultRetryStrategy = requireNonNull(resultRetryStrategy);
             return this;
         }
 
-        public Builder withStopStrategy(final Predicate<Integer> stopStrategy) {
+        public Builder<T> withStopStrategy(final Predicate<Integer> stopStrategy) {
             this.stopStrategy = requireNonNull(stopStrategy);
             return this;
         }
 
-        public Builder withWaitStrategy(final Function<Integer, Long> waitStrategy) {
+        public Builder<T> withWaitStrategy(final Function<Integer, Long> waitStrategy) {
             this.waitStrategy = requireNonNull(waitStrategy);
             return this;
         }
     }
 
-    private Retrier(final Predicate<Exception> exceptionRetryStrategy, final Predicate<Object> resultRetryStrategy,
+    private Retrier(final Predicate<Exception> exceptionRetryStrategy, final Predicate<T> resultRetryStrategy,
             final Predicate<Integer> stopStrategy, final Function<Integer, Long> waitStrategy,
-            final GiveUpStrategy giveUpStrategy) {
+            final GiveUpStrategy<T> giveUpStrategy) {
         this.exceptionRetryStrategy = exceptionRetryStrategy;
         this.resultRetryStrategy = resultRetryStrategy;
         this.stopStrategy = stopStrategy;
@@ -160,7 +161,7 @@ public class Retrier {
      * @return the result of callable invocation.
      * @throws Exception if the original callback execution failed and {@link Retrier} has decided to stop retrying.
      */
-    public <T> T execute(final Callable<T> callable) throws Exception {
+    public T execute(final Callable<T> callable) throws Exception {
         int attempts = 0;
         boolean shouldRetry;
         boolean attemptFailed = false;

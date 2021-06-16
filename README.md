@@ -74,6 +74,10 @@ Retrier retrier = new Retrier.Builder().withWaitStrategy(Retrier.Strategies.wait
 Alternatively, it is possible to use a provided exponential wait strategy which increases the wait between retries:
 ```java
 Retrier retrier = new Retrier.Builder().withWaitStrategy(Retrier.Strategies.waitExponential()).build();
+//same as
+Retrier retrier = new Retrier.Builder().withWaitStrategy(Retrier.Strategies.waitExponential(1, 2)).build();
+//wait 1s, 2s, 4s, ... between retries
+Retrier retrier = new Retrier.Builder().withWaitStrategy(Retrier.Strategies.waitExponential(1000, 2)).build();
 ```
 
 #### resultRetryStrategy
